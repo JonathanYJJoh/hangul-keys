@@ -1,5 +1,6 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Keyboard } from "./components/Keyboard";
+import { HangulComposer } from "./hangul/composer";
 import { jamoFor, keyByCode, type KeyDef } from "./keyboard/layout";
 import "./App.css";
 
@@ -7,26 +8,37 @@ function App() {
   const [pressed, setPressed] = useState<Set<string>>(new Set());
   const [shift, setShift] = useState(false);
   const [selected, setSelected] = useState<KeyDef>();
-  const [typed, setTyped] = useState<string[]>([]);
+  // Finished text, plus the syllable still being typed (shown underlined).
+  const [text, setText] = useState("");
+  const [composing, setComposing] = useState("");
+  const composer = useRef(new HangulComposer());
 
   useEffect(() => {
+    const engine = composer.current;
+
+    // Engine calls stay outside state updaters, which React may run twice.
+    const type = (input: string) => {
+      const done = engine.input(input);
+      if (done) setText((t) => t + done);
+      setComposing(engine.composing);
+    };
+
     const down = (e: KeyboardEvent) => {
       setShift(e.shiftKey);
       setPressed((prev) => new Set(prev).add(e.code));
 
       if (e.code === "Backspace") {
-        setTyped((t) => t.slice(0, -1));
+        if (!engine.backspace()) setText((t) => t.slice(0, -1));
+        setComposing(engine.composing);
         return;
       }
-      if (e.code === "Space") {
-        setTyped((t) => [...t, " "]);
-        return;
-      }
+      if (e.code === "Space") return type(" ");
+      if (e.code === "Enter") return type("\n");
+
       const key = keyByCode(e.code);
       const jamo = key && jamoFor(key, e.shiftKey);
       if (key && jamo && !e.repeat) {
-        // Until the composition engine exists, show raw letters (ㅎㅏㄴ, not 한).
-        setTyped((t) => [...t, jamo.char]);
+        type(jamo.char);
         setSelected(key);
       }
     };
@@ -69,7 +81,14 @@ function App() {
       </header>
 
       <section className="output" aria-live="polite">
-        {typed.length ? typed.join("") : <span className="placeholder">Start typing…</span>}
+        {text || composing ? (
+          <>
+            {text}
+            {composing && <span className="composing">{composing}</span>}
+          </>
+        ) : (
+          <span className="placeholder">Start typing…</span>
+        )}
         <span className="caret" />
       </section>
 
