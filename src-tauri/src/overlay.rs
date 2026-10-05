@@ -14,7 +14,10 @@ use std::{
 };
 
 use serde::{Deserialize, Serialize};
-use tauri::{AppHandle, Manager, PhysicalPosition, State, WebviewUrl, WebviewWindow, WebviewWindowBuilder};
+use tauri::{
+    AppHandle, Emitter, Manager, PhysicalPosition, State, WebviewUrl, WebviewWindow,
+    WebviewWindowBuilder,
+};
 
 pub const LABEL: &str = "overlay";
 /// Overlay size in logical pixels (scaled by the monitor's DPI setting).
@@ -83,6 +86,10 @@ pub fn create(app: &AppHandle) -> tauri::Result<()> {
     Ok(())
 }
 
+pub fn is_visible(app: &AppHandle) -> bool {
+    app.state::<OverlayState>().visible.load(Ordering::Relaxed)
+}
+
 pub fn toggle(app: &AppHandle) {
     let Some(overlay) = app.get_webview_window(LABEL) else {
         return;
@@ -93,6 +100,8 @@ pub fn toggle(app: &AppHandle) {
         overlay.hide()
     } else {
         state.visible.store(true, Ordering::Relaxed);
+        // Keys released while hidden were never reported; start clean.
+        let _ = overlay.emit("overlay-shown", ());
         place(app, &overlay).and_then(|_| overlay.show())
     };
     if let Err(e) = result {

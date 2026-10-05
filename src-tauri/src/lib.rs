@@ -1,3 +1,5 @@
+#[cfg(windows)]
+mod keyhook;
 mod overlay;
 mod tray;
 
@@ -42,6 +44,8 @@ pub fn run() {
         .setup(move |app| {
             overlay::create(app.handle())?;
             tray::create(app.handle())?;
+            #[cfg(windows)]
+            keyhook::start(app.handle().clone());
             app.global_shortcut().register(toggle_shortcut)?;
             Ok(())
         })
