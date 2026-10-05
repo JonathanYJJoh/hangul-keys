@@ -1,6 +1,7 @@
 import React, { useEffect, useLayoutEffect, useRef, useState } from "react";
 import ReactDOM from "react-dom/client";
 import { invoke } from "@tauri-apps/api/core";
+import { listen } from "@tauri-apps/api/event";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { Keyboard } from "./components/Keyboard";
 import "./App.css";
@@ -37,7 +38,29 @@ function startDrag(e: React.MouseEvent) {
 function Overlay() {
   const [collapsed, setCollapsed] = useState(() => loadSetting("overlay.collapsed", false));
   const [opacity, setOpacity] = useState(() => loadSetting("overlay.opacity", 0));
+  const [pressed, setPressed] = useState<Set<string>>(new Set());
   const root = useRef<HTMLDivElement>(null);
+
+  // The overlay never has focus, so keys come from the system-wide keyboard
+  // hook in Rust rather than from DOM keydown events.
+  useEffect(() => {
+    if (!inTauri) return;
+    const unlisteners = [
+      listen<{ code: string; down: boolean }>("global-key", ({ payload }) => {
+        setPressed((prev) => {
+          if (payload.down === prev.has(payload.code)) return prev; // key repeat
+          const next = new Set(prev);
+          if (payload.down) next.add(payload.code);
+          else next.delete(payload.code);
+          return next;
+        });
+      }),
+      listen("overlay-shown", () => setPressed(new Set())),
+    ];
+    return () => {
+      for (const u of unlisteners) u.then((stop) => stop());
+    };
+  }, []);
 
   useEffect(() => saveSetting("overlay.collapsed", collapsed), [collapsed]);
   useEffect(() => saveSetting("overlay.opacity", opacity), [opacity]);
@@ -95,10 +118,12 @@ function Overlay() {
         </div>
       )}
 
-      {/* The overlay never has focus, so it can't see keystrokes yet; for now
-          it is a static map. Global key listening will light keys up later. */}
       <div style={{ opacity: level }}>
-        <Keyboard pressed={new Set()} shift={false} variant="compact" />
+        <Keyboard
+          pressed={pressed}
+          shift={pressed.has("ShiftLeft") || pressed.has("ShiftRight")}
+          variant="compact"
+        />
       </div>
     </div>
   );
