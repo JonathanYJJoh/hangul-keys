@@ -259,3 +259,174 @@ kbd {
     display: none;
   }
 }
+
+/* Navigation */
+
+.topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.tabs {
+  display: flex;
+  gap: 4px;
+  background: var(--panel);
+  border-radius: 10px;
+  padding: 4px;
+}
+
+.tabs button,
+.segmented button {
+  border: none;
+  border-radius: 7px;
+  padding: 6px 14px;
+  background: transparent;
+  color: var(--muted);
+  font: inherit;
+  font-size: 0.9rem;
+  cursor: pointer;
+}
+
+.tabs button:hover,
+.segmented button:hover {
+  color: var(--text);
+}
+
+.tabs button.active,
+.segmented button.active {
+  background: var(--key);
+  color: var(--text);
+}
+
+/* Settings */
+
+.settings {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.settings-group {
+  background: var(--panel);
+  border-radius: 12px;
+  padding: 16px 20px;
+}
+
+.settings-group h2 {
+  margin: 0 0 4px;
+  font-size: 1.05rem;
+}
+
+.setting {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 14px 0;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.settings-group > .setting-hint + .setting {
+  margin-top: 8px;
+}
+
+.setting-label {
+  font-size: 0.95rem;
+}
+
+.setting-hint {
+  color: var(--muted);
+  font-size: 0.8rem;
+  margin-top: 2px;
+}
+
+.setting-control {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.setting-control input[type="range"] {
+  width: 180px;
+  accent-color: var(--consonant);
+}
+
+.setting-value {
+  width: 3em;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  color: var(--muted);
+}
+
+.segmented {
+  display: flex;
+  gap: 2px;
+  background: var(--bg);
+  border-radius: 9px;
+  padding: 3px;
+}
+
+.button {
+  border: none;
+  border-radius: 7px;
+  padding: 8px 14px;
+  background: var(--key);
+  color: var(--text);
+  font: inherit;
+  font-size: 0.9rem;
+  cursor: pointer;
+}
+
+.button:hover:not(:disabled) {
+  background: #2c3140;
+}
+
+.button:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+/* An on/off switch drawn from a plain checkbox. */
+.switch {
+  appearance: none;
+  flex-shrink: 0;
+  width: 40px;
+  height: 22px;
+  margin: 0;
+  border-radius: 11px;
+  background: var(--key);
+  position: relative;
+  cursor: pointer;
+  transition: background 120ms;
+}
+
+.switch::after {
+  content: "";
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--text);
+  transition: transform 120ms;
+}
+
+.switch:checked {
+  background: var(--consonant);
+}
+
+.switch:checked::after {
+  transform: translateX(18px);
+}
+
+.switch:focus-visible,
+.button:focus-visible,
+.tabs button:focus-visible,
+.segmented button:focus-visible {
+  outline: 2px solid var(--consonant);
+  outline-offset: 2px;
+}
