@@ -1,17 +1,24 @@
 import { ROWS, jamoFor, type KeyDef } from "../keyboard/layout";
 
+/** The overlay only needs the three letter rows, without the plain keys. */
+const COMPACT_ROWS = ROWS.slice(1, 4).map((row) => row.filter((k) => k.base));
+
 interface KeyboardProps {
   /** KeyboardEvent.code values currently held down. */
   pressed: Set<string>;
   shift: boolean;
   selected?: string;
   onSelect?: (key: KeyDef) => void;
+  /** "compact" shows only the Korean letter keys, for the overlay. */
+  variant?: "full" | "compact";
 }
 
-export function Keyboard({ pressed, shift, selected, onSelect }: KeyboardProps) {
+export function Keyboard({ pressed, shift, selected, onSelect, variant = "full" }: KeyboardProps) {
+  const rows = variant === "compact" ? COMPACT_ROWS : ROWS;
+
   return (
-    <div className="keyboard" role="group" aria-label="Korean keyboard">
-      {ROWS.map((row, i) => (
+    <div className={`keyboard ${variant}`} role="group" aria-label="Korean keyboard">
+      {rows.map((row, i) => (
         <div className="kb-row" key={i}>
           {row.map((key) => {
             const jamo = jamoFor(key, shift);
@@ -33,6 +40,7 @@ export function Keyboard({ pressed, shift, selected, onSelect }: KeyboardProps) 
                 title={jamo ? `${key.label} → ${jamo.char} (${jamo.roman})` : undefined}
               >
                 <span className="key-en">{key.label}</span>
+                {key.shift && !shift && <span className="key-shift">{key.shift.char}</span>}
                 {jamo && <span className="key-ko">{jamo.char}</span>}
                 {jamo && <span className="key-roman">{jamo.roman}</span>}
               </button>
