@@ -164,6 +164,15 @@ kbd {
   color: var(--muted);
 }
 
+/* The letter Shift would type, shown small in the corner. */
+.key-shift {
+  position: absolute;
+  top: 4px;
+  right: 6px;
+  font-size: 0.7rem;
+  color: var(--muted);
+}
+
 .key.plain .key-en {
   position: static;
 }

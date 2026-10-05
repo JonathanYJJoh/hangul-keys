@@ -78,6 +78,10 @@ function App() {
         <p className="hint">
           Type on your keyboard or click a key. Hold <kbd>Shift</kbd> for ㅃ ㅉ ㄸ ㄲ ㅆ ㅒ ㅖ.
         </p>
+        <p className="hint">
+          Press <kbd>Ctrl</kbd>+<kbd>Alt</kbd>+<kbd>K</kbd> anywhere to show or hide the floating
+          keyboard. Closing this window keeps Hangul Keys running in the system tray.
+        </p>
       </header>
 
       <section className="output" aria-live="polite">
