@@ -15,12 +15,15 @@ use std::{
 
 use serde::{Deserialize, Serialize};
 use tauri::{
-    AppHandle, Emitter, Manager, PhysicalPosition, State, WebviewUrl, WebviewWindow,
+    AppHandle, Emitter, LogicalSize, Manager, PhysicalPosition, State, WebviewUrl, WebviewWindow,
     WebviewWindowBuilder,
 };
 
+use crate::settings;
+
 pub const LABEL: &str = "overlay";
-/// Overlay size in logical pixels (scaled by the monitor's DPI setting).
+/// Overlay size in logical pixels at 100% size, before the user's size
+/// setting and the monitor's DPI scaling.
 const SIZE: (f64, f64) = (720.0, 252.0);
 /// Gap between the overlay and the bottom of the screen, clearing the taskbar.
 const BOTTOM_MARGIN: f64 = 80.0;
@@ -57,13 +60,18 @@ pub struct OverlayState {
     hit_regions: Mutex<Vec<Rect>>,
     /// Where the user last dragged the overlay, saved to disk on exit.
     position: Mutex<Option<SavedPosition>>,
+    /// What to restore when the overlay closes, if opening it switched the
+    /// user to Korean.
+    #[cfg(windows)]
+    previous_input: Mutex<Option<crate::input_lang::Previous>>,
 }
 
 /// Creates the overlay window, hidden until the hotkey is pressed.
 pub fn create(app: &AppHandle) -> tauri::Result<()> {
+    let scale = settings::current(app).overlay_scale;
     let overlay = WebviewWindowBuilder::new(app, LABEL, WebviewUrl::App("overlay.html".into()))
         .title("Hangul Keys Overlay")
-        .inner_size(SIZE.0, SIZE.1)
+        .inner_size(SIZE.0 * scale, SIZE.1 * scale)
         .transparent(true)
         .decorations(false)
         .shadow(false)
@@ -97,11 +105,15 @@ pub fn toggle(app: &AppHandle) {
     let state = app.state::<OverlayState>();
     let result = if state.visible.load(Ordering::Relaxed) {
         state.visible.store(false, Ordering::Relaxed);
+        restore_language(app);
         overlay.hide()
     } else {
         state.visible.store(true, Ordering::Relaxed);
         // Keys released while hidden were never reported; start clean.
         let _ = overlay.emit("overlay-shown", ());
+        if settings::current(app).auto_korean {
+            switch_language(app);
+        }
         place(app, &overlay).and_then(|_| overlay.show())
     };
     if let Err(e) = result {
@@ -109,10 +121,53 @@ pub fn toggle(app: &AppHandle) {
     }
 }
 
+/// Turns on the Korean keyboard in the app being typed in. Runs on its own
+/// thread because the switch waits briefly for Windows to apply it.
+fn switch_language(app: &AppHandle) {
+    #[cfg(windows)]
+    {
+        let app = app.clone();
+        thread::spawn(move || {
+            let previous = crate::input_lang::switch_to_korean();
+            *app.state::<OverlayState>().previous_input.lock().unwrap() = previous;
+        });
+    }
+}
+
+/// Puts back the keyboard the user had before the overlay switched it.
+fn restore_language(app: &AppHandle) {
+    #[cfg(windows)]
+    if let Some(previous) = app.state::<OverlayState>().previous_input.lock().unwrap().take() {
+        thread::spawn(move || crate::input_lang::restore(previous));
+    }
+}
+
 #[tauri::command]
 pub fn hide_overlay(app: AppHandle) {
     if app.state::<OverlayState>().visible.load(Ordering::Relaxed) {
         toggle(&app);
+    }
+}
+
+/// Resizes the overlay for the size setting; the page scales its content.
+pub fn apply_scale(app: &AppHandle, scale: f64) -> tauri::Result<()> {
+    match app.get_webview_window(LABEL) {
+        Some(overlay) => overlay.set_size(LogicalSize::new(SIZE.0 * scale, SIZE.1 * scale)),
+        None => Ok(()),
+    }
+}
+
+/// Forgets where the user dragged the overlay and moves it back to the
+/// bottom center of the screen.
+#[tauri::command]
+pub fn reset_overlay_position(app: AppHandle) -> Result<(), String> {
+    *app.state::<OverlayState>().position.lock().unwrap() = None;
+    if let Some(path) = position_file(&app) {
+        let _ = fs::remove_file(path);
+    }
+    match app.get_webview_window(LABEL) {
+        Some(overlay) if is_visible(&app) => place(&app, &overlay).map_err(|e| e.to_string()),
+        _ => Ok(()),
     }
 }
 
@@ -141,7 +196,7 @@ fn place(app: &AppHandle, overlay: &WebviewWindow) -> tauri::Result<()> {
         },
     };
 
-    let scale = monitor.scale_factor();
+    let scale = monitor.scale_factor() * settings::current(app).overlay_scale;
     let (screen_pos, screen_size) = (monitor.position(), monitor.size());
     let width = (SIZE.0 * scale) as i32;
     let height = (SIZE.1 * scale) as i32;

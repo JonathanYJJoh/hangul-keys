@@ -4,13 +4,30 @@ import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { Keyboard } from "./components/Keyboard";
+import { inTauri, useSettings } from "./settings";
 import "./App.css";
 import "./overlay.css";
 
-/** False when the page is opened in a normal browser for development. */
-const inTauri = "__TAURI_INTERNALS__" in window;
+/** Mirrors `InputMode` in src-tauri/src/input_lang.rs. */
+type InputMode = "hangul" | "latin" | "other" | "missing";
 
+const MODE_BADGES: Record<InputMode, { label: string; title: string }> = {
+  hangul: { label: "한", title: "Typing Korean. Click to type English letters." },
+  latin: { label: "A", title: "Korean keyboard in English mode. Click to type Korean." },
+  other: { label: "EN", title: "Not using the Korean keyboard. Click to switch to Korean." },
+  missing: {
+    label: "한?",
+    title: "The Windows Korean keyboard isn't installed. Click to open language settings.",
+  },
+};
+
+/** Levels the toolbar's ◐ button steps through. */
 const OPACITY_LEVELS = [1, 0.75, 0.5, 0.3];
+
+/** The next level down from the current opacity, wrapping back to 100%. */
+function nextOpacity(current: number): number {
+  return OPACITY_LEVELS.find((level) => level < current - 0.01) ?? OPACITY_LEVELS[0];
+}
 
 /** Reads a remembered setting; storage can be unavailable, so never throw. */
 function loadSetting<T>(key: string, fallback: T): T {
@@ -36,9 +53,11 @@ function startDrag(e: React.MouseEvent) {
 }
 
 function Overlay() {
+  const [settings, updateSettings] = useSettings();
+  // Collapsing the toolbar is a quick overlay-only choice, not an app setting.
   const [collapsed, setCollapsed] = useState(() => loadSetting("overlay.collapsed", false));
-  const [opacity, setOpacity] = useState(() => loadSetting("overlay.opacity", 0));
   const [pressed, setPressed] = useState<Set<string>>(new Set());
+  const [mode, setMode] = useState<InputMode>();
   const root = useRef<HTMLDivElement>(null);
 
   // The overlay never has focus, so keys come from the system-wide keyboard
@@ -56,14 +75,19 @@ function Overlay() {
         });
       }),
       listen("overlay-shown", () => setPressed(new Set())),
+      listen<InputMode>("input-mode", ({ payload }) => setMode(payload)),
     ];
     return () => {
       for (const u of unlisteners) u.then((stop) => stop());
     };
   }, []);
 
+  // Turning highlighting off mid-press would leave keys lit.
+  useEffect(() => {
+    if (!settings.highlightKeys) setPressed(new Set());
+  }, [settings.highlightKeys]);
+
   useEffect(() => saveSetting("overlay.collapsed", collapsed), [collapsed]);
-  useEffect(() => saveSetting("overlay.opacity", opacity), [opacity]);
 
   // Tell Rust which areas should catch the mouse. Everything else, including
   // the keys, stays click-through.
@@ -80,17 +104,29 @@ function Overlay() {
     const observer = new ResizeObserver(report);
     observer.observe(root.current);
     return () => observer.disconnect();
-  }, [collapsed]);
+  }, [collapsed, settings.overlayScale]);
 
-  const level = OPACITY_LEVELS[opacity % OPACITY_LEVELS.length];
+  const opacity = settings.overlayOpacity;
+  const badge = mode && MODE_BADGES[mode];
+  const modeBadge = badge && (
+    <button
+      className={`mode-badge ${mode}`}
+      title={badge.title}
+      onClick={() => invoke(mode === "missing" ? "open_language_settings" : "toggle_hangul")}
+    >
+      {badge.label}
+    </button>
+  );
 
   return (
-    <div className="overlay" ref={root}>
+    // Rust resizes the window for the size setting; zoom scales the content.
+    <div className="overlay" ref={root} style={{ zoom: settings.overlayScale }}>
       {collapsed ? (
         <div className="toolbar collapsed" data-clickable>
           <span className="grip" onMouseDown={startDrag} title="Drag to move">
             ⠿
           </span>
+          {modeBadge}
           <button onClick={() => setCollapsed(false)} title="Show toolbar">
             ▾
           </button>
@@ -100,14 +136,15 @@ function Overlay() {
           <span className="grip" onMouseDown={startDrag} title="Drag to move">
             ⠿ <span className="toolbar-title">Hangul Keys</span>
           </span>
+          {modeBadge}
           <button onClick={() => invoke("open_main_window")} title="Open the Hangul Keys app">
             ↗ Open app
           </button>
           <button
-            onClick={() => setOpacity((o) => (o + 1) % OPACITY_LEVELS.length)}
+            onClick={() => updateSettings({ overlayOpacity: nextOpacity(opacity) })}
             title="Change transparency"
           >
-            ◐ {Math.round(level * 100)}%
+            ◐ {Math.round(opacity * 100)}%
           </button>
           <button onClick={() => setCollapsed(true)} title="Hide toolbar">
             ▴
@@ -118,11 +155,13 @@ function Overlay() {
         </div>
       )}
 
-      <div style={{ opacity: level }}>
+      <div style={{ opacity }}>
         <Keyboard
           pressed={pressed}
           shift={pressed.has("ShiftLeft") || pressed.has("ShiftRight")}
           variant="compact"
+          showRomanization={settings.showRomanization}
+          showShiftHints={settings.showShiftHints}
         />
       </div>
     </div>

@@ -23,7 +23,7 @@ use windows::Win32::{
     },
 };
 
-use crate::overlay;
+use crate::{overlay, settings};
 
 /// Sent to the overlay page for every key press and release.
 #[derive(Clone, Serialize)]
@@ -45,7 +45,7 @@ pub fn start(app: AppHandle) {
 
     thread::spawn(move || {
         for event in rx {
-            if overlay::is_visible(&app) {
+            if overlay::is_visible(&app) && settings::current(&app).highlight_keys {
                 let _ = app.emit_to(overlay::LABEL, "global-key", event);
             }
         }

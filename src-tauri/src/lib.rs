@@ -1,6 +1,9 @@
 #[cfg(windows)]
+mod input_lang;
+#[cfg(windows)]
 mod keyhook;
 mod overlay;
+mod settings;
 mod tray;
 
 use tauri::{Manager, RunEvent, WindowEvent};
@@ -20,6 +23,31 @@ fn open_main_window(app: tauri::AppHandle) {
     show_main_window(&app);
 }
 
+/// Whether the Windows Korean keyboard is installed.
+#[tauri::command]
+fn korean_keyboard_installed() -> bool {
+    #[cfg(windows)]
+    return input_lang::korean_installed();
+    #[cfg(not(windows))]
+    false
+}
+
+/// The overlay's 한/A badge: toggles Hangul mode in the app being typed in.
+#[tauri::command]
+fn toggle_hangul() {
+    #[cfg(windows)]
+    std::thread::spawn(input_lang::toggle_hangul);
+}
+
+/// Opens the Windows page where the Korean keyboard can be added.
+#[tauri::command]
+fn open_language_settings(app: tauri::AppHandle) -> Result<(), String> {
+    use tauri_plugin_opener::OpenerExt;
+    app.opener()
+        .open_url("ms-settings:regionlanguage", None::<&str>)
+        .map_err(|e| e.to_string())
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     let toggle_shortcut = Shortcut::new(Some(Modifiers::CONTROL | Modifiers::ALT), Code::KeyK);
@@ -36,16 +64,27 @@ pub fn run() {
                 .build(),
         )
         .manage(overlay::OverlayState::default())
+        .manage(settings::SettingsState::default())
         .invoke_handler(tauri::generate_handler![
             open_main_window,
+            korean_keyboard_installed,
+            toggle_hangul,
+            open_language_settings,
             overlay::hide_overlay,
+            overlay::reset_overlay_position,
             overlay::set_overlay_hit_regions,
+            settings::get_settings,
+            settings::update_settings,
         ])
         .setup(move |app| {
+            settings::load(app.handle());
             overlay::create(app.handle())?;
             tray::create(app.handle())?;
             #[cfg(windows)]
-            keyhook::start(app.handle().clone());
+            {
+                keyhook::start(app.handle().clone());
+                input_lang::watch(app.handle().clone());
+            }
             app.global_shortcut().register(toggle_shortcut)?;
             Ok(())
         })

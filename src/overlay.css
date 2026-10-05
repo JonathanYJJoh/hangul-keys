@@ -97,3 +97,25 @@ body {
 .keyboard.compact .key-ko {
   font-size: 1.4rem;
 }
+
+/* Shows whether typing produces Korean; click to toggle 한/A. */
+.toolbar button.mode-badge {
+  min-width: 34px;
+  padding: 0 8px;
+  font-weight: 700;
+}
+
+.toolbar button.mode-badge.hangul {
+  background: var(--consonant);
+  color: #0f1117;
+}
+
+.toolbar button.mode-badge.latin,
+.toolbar button.mode-badge.other {
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.toolbar button.mode-badge.missing {
+  background: rgba(255, 138, 91, 0.25);
+  color: var(--vowel);
+}

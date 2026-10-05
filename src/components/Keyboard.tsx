@@ -11,9 +11,19 @@ interface KeyboardProps {
   onSelect?: (key: KeyDef) => void;
   /** "compact" shows only the Korean letter keys, for the overlay. */
   variant?: "full" | "compact";
+  showRomanization?: boolean;
+  showShiftHints?: boolean;
 }
 
-export function Keyboard({ pressed, shift, selected, onSelect, variant = "full" }: KeyboardProps) {
+export function Keyboard({
+  pressed,
+  shift,
+  selected,
+  onSelect,
+  variant = "full",
+  showRomanization = true,
+  showShiftHints = true,
+}: KeyboardProps) {
   const rows = variant === "compact" ? COMPACT_ROWS : ROWS;
 
   return (
@@ -40,9 +50,11 @@ export function Keyboard({ pressed, shift, selected, onSelect, variant = "full" 
                 title={jamo ? `${key.label} → ${jamo.char} (${jamo.roman})` : undefined}
               >
                 <span className="key-en">{key.label}</span>
-                {key.shift && !shift && <span className="key-shift">{key.shift.char}</span>}
+                {showShiftHints && key.shift && !shift && (
+                  <span className="key-shift">{key.shift.char}</span>
+                )}
                 {jamo && <span className="key-ko">{jamo.char}</span>}
-                {jamo && <span className="key-roman">{jamo.roman}</span>}
+                {showRomanization && jamo && <span className="key-roman">{jamo.roman}</span>}
               </button>
             );
           })}
