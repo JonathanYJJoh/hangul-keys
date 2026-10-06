@@ -48,10 +48,12 @@ const COMPOUND_FINALS: Record<string, string> = {
   "ㅂㅅ": "ㅄ",
 };
 
-/** Reverse of COMPOUND_FINALS: ㄺ → ["ㄹ", "ㄱ"]. */
-const SPLIT_FINALS: Record<string, [string, string]> = Object.fromEntries(
-  Object.entries(COMPOUND_FINALS).map(([pair, merged]) => [merged, [pair[0], pair[1]]]),
-);
+/** Reverses a pair table: { "ㄹㄱ": "ㄺ" } → { ㄺ: ["ㄹ", "ㄱ"] }. */
+const splitTable = (pairs: Record<string, string>): Record<string, [string, string]> =>
+  Object.fromEntries(Object.entries(pairs).map(([pair, merged]) => [merged, [pair[0], pair[1]]]));
+
+const SPLIT_VOWELS = splitTable(COMPOUND_VOWELS);
+const SPLIT_FINALS = splitTable(COMPOUND_FINALS);
 
 export const isConsonant = (j: string) => INITIALS.includes(j);
 export const isVowel = (j: string) => VOWELS.includes(j);
@@ -67,6 +69,32 @@ export const combineFinals = (a: string, b: string): string | undefined =>
   COMPOUND_FINALS[a + b];
 
 export const splitFinal = (f: string): [string, string] | undefined => SPLIT_FINALS[f];
+
+/**
+ * The keys typed to produce a character, in order: the reverse of composing.
+ * Compound vowels and double finals take two keys: 과 → ㄱ ㅗ ㅏ, 닭 → ㄷ ㅏ ㄹ ㄱ.
+ * Lone jamo and other characters (like spaces) are typed as themselves.
+ */
+export function decompose(char: string): string[] {
+  const code = char.charCodeAt(0) - SYLLABLE_BASE;
+  const syllableCount = INITIALS.length * VOWELS.length * FINALS.length;
+  if (char.length !== 1 || code < 0 || code >= syllableCount) {
+    const split = SPLIT_VOWELS[char] ?? SPLIT_FINALS[char];
+    return split ? [...split] : [char];
+  }
+
+  const initial = INITIALS[Math.floor(code / (VOWELS.length * FINALS.length))];
+  const vowel = VOWELS[Math.floor(code / FINALS.length) % VOWELS.length];
+  const final = FINALS[code % FINALS.length];
+  return [
+    initial,
+    ...(SPLIT_VOWELS[vowel] ?? [vowel]),
+    ...(final ? (SPLIT_FINALS[final] ?? [final]) : []),
+  ];
+}
+
+/** The keys typed to produce a whole string, e.g. "한글" → ㅎ ㅏ ㄴ ㄱ ㅡ ㄹ. */
+export const keystrokesFor = (text: string): string[] => [...text].flatMap(decompose);
 
 /** Builds the precomposed syllable, e.g. ("ㅎ", "ㅏ", "ㄴ") → "한". */
 export function makeSyllable(initial: string, vowel: string, final = ""): string {

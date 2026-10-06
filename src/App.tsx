@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { PracticePage } from "./pages/PracticePage";
 import { SettingsPage } from "./pages/SettingsPage";
 import { TypingPage } from "./pages/TypingPage";
 import { useSettings } from "./settings";
@@ -6,6 +7,7 @@ import "./App.css";
 
 const PAGES = [
   { id: "typing", label: "Keyboard" },
+  { id: "practice", label: "Practice" },
   { id: "settings", label: "Settings" },
 ] as const;
 
@@ -37,6 +39,7 @@ function App() {
       </nav>
 
       {page === "typing" && <TypingPage settings={settings} />}
+      {page === "practice" && <PracticePage settings={settings} />}
       {page === "settings" && <SettingsPage settings={settings} update={updateSettings} />}
     </main>
   );
