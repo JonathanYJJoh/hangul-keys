@@ -430,3 +430,99 @@ kbd {
   outline: 2px solid var(--consonant);
   outline-offset: 2px;
 }
+
+/* Letter detail: the letter and its sound on the left, name and example
+   on the right, tips across the bottom. */
+
+.detail {
+  flex-wrap: wrap;
+  row-gap: 8px;
+}
+
+.detail-main {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.detail-roman {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.detail-sound {
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
+.detail-facts {
+  display: flex;
+  gap: 32px;
+  margin: 0 0 0 auto;
+}
+
+.detail-facts dt {
+  color: var(--muted);
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.detail-facts dd {
+  margin: 2px 0 0;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 1.05rem;
+}
+
+.muted {
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
+.detail-tip {
+  flex-basis: 100%;
+  margin: 0;
+  padding-top: 8px;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
+.speak {
+  border: none;
+  border-radius: 6px;
+  width: 28px;
+  height: 26px;
+  padding: 0;
+  background: var(--key);
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+
+.speak:hover:not(:disabled) {
+  background: #2c3140;
+}
+
+.speak:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.speak:focus-visible,
+.link:focus-visible {
+  outline: 2px solid var(--consonant);
+  outline-offset: 2px;
+}
+
+.link {
+  border: none;
+  padding: 0;
+  background: none;
+  color: var(--consonant);
+  font: inherit;
+  text-decoration: underline;
+  cursor: pointer;
+}

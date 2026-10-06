@@ -1,10 +1,14 @@
 import { useEffect, useRef, useState } from "react";
 import { Keyboard } from "../components/Keyboard";
+import { LetterDetail } from "../components/LetterDetail";
 import { HangulComposer } from "../hangul/composer";
+import { PRONUNCIATION } from "../hangul/pronunciation";
 import { jamoFor, keyByCode, type KeyDef } from "../keyboard/layout";
 import type { Settings } from "../settings";
+import { speak, useKoreanVoice } from "../speech";
 
 export function TypingPage({ settings }: { settings: Settings }) {
+  const voice = useKoreanVoice();
   const [pressed, setPressed] = useState<Set<string>>(new Set());
   const [shift, setShift] = useState(false);
   const [selected, setSelected] = useState<KeyDef>();
@@ -69,11 +73,19 @@ export function TypingPage({ settings }: { settings: Settings }) {
 
   const selectedJamo = selected && jamoFor(selected, shift && !!selected.shift);
 
+  // Clicking a key says its sound; typing doesn't, which would be noisy.
+  const selectAndSpeak = (key: KeyDef) => {
+    setSelected(key);
+    const jamo = jamoFor(key, shift);
+    if (settings.speakLetters && voice && jamo) speak(PRONUNCIATION[jamo.char].sound, voice);
+  };
+
   return (
     <>
       <header>
         <p className="hint">
-          Type on your keyboard or click a key. Hold <kbd>Shift</kbd> for ㅃ ㅉ ㄸ ㄲ ㅆ ㅒ ㅖ.
+          Type on your keyboard, or click a key to hear it. Hold <kbd>Shift</kbd> for ㅃ ㅉ ㄸ ㄲ ㅆ
+          ㅒ ㅖ.
         </p>
         <p className="hint">
           Press <kbd>Ctrl</kbd>+<kbd>Alt</kbd>+<kbd>K</kbd> anywhere to show or hide the floating
@@ -93,28 +105,13 @@ export function TypingPage({ settings }: { settings: Settings }) {
         <span className="caret" />
       </section>
 
-      <section className="detail">
-        {selected && selectedJamo ? (
-          <>
-            <span className="detail-char">{selectedJamo.char}</span>
-            <div>
-              <div className="detail-roman">“{selectedJamo.roman}”</div>
-              <div className="detail-meta">
-                {selectedJamo.kind} · key <kbd>{selected.label}</kbd>
-                {selected.shift && !shift && <> · Shift → {selected.shift.char}</>}
-              </div>
-            </div>
-          </>
-        ) : (
-          <span className="placeholder">Select a letter to see how it sounds</span>
-        )}
-      </section>
+      <LetterDetail keyDef={selected} jamo={selectedJamo} shift={shift} voice={voice} />
 
       <Keyboard
         pressed={pressed}
         shift={shift}
         selected={selected?.code}
-        onSelect={setSelected}
+        onSelect={selectAndSpeak}
         showRomanization={settings.showRomanization}
         showShiftHints={settings.showShiftHints}
       />
