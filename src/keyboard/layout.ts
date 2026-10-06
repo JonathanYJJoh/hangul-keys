@@ -94,3 +94,20 @@ const BY_CODE = new Map(ROWS.flat().map((k) => [k.code, k]));
 export function keyByCode(code: string): KeyDef | undefined {
   return BY_CODE.get(code);
 }
+
+/** Which key types a letter, and whether Shift is needed: ㅃ → Q with Shift. */
+export function keyForJamo(char: string): { key: KeyDef; shift: boolean } | undefined {
+  if (char === " ") return { key: BY_CODE.get("Space")!, shift: false };
+  for (const key of BY_CODE.values()) {
+    if (key.base?.char === char) return { key, shift: false };
+    if (key.shift?.char === char) return { key, shift: true };
+  }
+  return undefined;
+}
+
+/** The letter (or " ") a keypress types, or undefined for other keys. */
+export function typedJamo(code: string, shift: boolean): string | undefined {
+  if (code === "Space") return " ";
+  const key = keyByCode(code);
+  return key && jamoFor(key, shift)?.char;
+}

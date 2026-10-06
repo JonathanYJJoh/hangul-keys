@@ -13,6 +13,10 @@ interface KeyboardProps {
   variant?: "full" | "compact";
   showRomanization?: boolean;
   showShiftHints?: boolean;
+  /** Keys to highlight as "press this next" (practice hints). */
+  targets?: Set<string>;
+  /** A key to flash as a wrong press. */
+  wrong?: string;
 }
 
 export function Keyboard({
@@ -23,6 +27,8 @@ export function Keyboard({
   variant = "full",
   showRomanization = true,
   showShiftHints = true,
+  targets,
+  wrong,
 }: KeyboardProps) {
   const rows = variant === "compact" ? COMPACT_ROWS : ROWS;
 
@@ -38,6 +44,8 @@ export function Keyboard({
               pressed.has(key.code) ? "pressed" : "",
               selected === key.code ? "selected" : "",
               shift && key.shift ? "shifted" : "",
+              targets?.has(key.code) ? "target" : "",
+              wrong === key.code ? "wrong" : "",
             ].join(" ");
 
             return (
