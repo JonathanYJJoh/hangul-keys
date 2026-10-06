@@ -152,6 +152,16 @@ export function SettingsPage({ settings, update }: SettingsPageProps) {
       </section>
 
       <section className="settings-group">
+        <h2>Pronunciation</h2>
+        <Toggle
+          label="Say each letter when I click it"
+          hint="Clicking a key on the Keyboard page plays its sound, like 가 for ㄱ. Use the 🔊 buttons to hear names and example words."
+          checked={settings.speakLetters}
+          onChange={(speakLetters) => update({ speakLetters })}
+        />
+      </section>
+
+      <section className="settings-group">
         <h2>Keyboard labels</h2>
         <Toggle
           label="Show romanization"

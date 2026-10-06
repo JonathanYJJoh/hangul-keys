@@ -28,6 +28,8 @@ pub struct Settings {
     pub show_romanization: bool,
     /// Show the Shift letter (ㅃ, ㅆ...) in the corner of keys.
     pub show_shift_hints: bool,
+    /// Say a letter's sound when its key is clicked.
+    pub speak_letters: bool,
 }
 
 impl Default for Settings {
@@ -39,6 +41,7 @@ impl Default for Settings {
             auto_korean: true,
             show_romanization: true,
             show_shift_hints: true,
+            speak_letters: true,
         }
     }
 }

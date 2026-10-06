@@ -13,6 +13,7 @@ export interface Settings {
   autoKorean: boolean;
   showRomanization: boolean;
   showShiftHints: boolean;
+  speakLetters: boolean;
 }
 
 export const DEFAULT_SETTINGS: Settings = {
@@ -22,6 +23,7 @@ export const DEFAULT_SETTINGS: Settings = {
   autoKorean: true,
   showRomanization: true,
   showShiftHints: true,
+  speakLetters: true,
 };
 
 /**
